@@ -1,5 +1,5 @@
 ${module}: ${title}
 
-${type} --- [Init|Feature|Bugfix|Reconstruct]
+${type} --- [Init|Feature|Bugfix|Reconstruct|Optimize]
 
 Description:
