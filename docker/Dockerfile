@@ -1,4 +1,5 @@
-FROM ubuntu:22.04
+ARG BASE_IMAGE=ubuntu:22.04
+FROM ${BASE_IMAGE}
 
 ARG PROXY
 ARG HOST_USER
@@ -9,11 +10,12 @@ WORKDIR /root
 
 # Install apt packages
 RUN if [ x"$(arch 2>/dev/null)" = x"aarch64" ]; then \
+    . /etc/os-release && \
     echo "replaced apt source list" && \
-    echo "deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ jammy main restricted universe multiverse" > /etc/apt/sources.list && \
-    echo "deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ jammy-updates main restricted universe multiverse" >> /etc/apt/sources.list && \
-    echo "deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ jammy-backports main restricted universe multiverse" >> /etc/apt/sources.list && \
-    echo "deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ jammy-security main restricted universe multiverse" >> /etc/apt/sources.list; \
+    echo "deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ ${VERSION_CODENAME} main restricted universe multiverse" > /etc/apt/sources.list && \
+    echo "deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ ${VERSION_CODENAME}-updates main restricted universe multiverse" >> /etc/apt/sources.list && \
+    echo "deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ ${VERSION_CODENAME}-backports main restricted universe multiverse" >> /etc/apt/sources.list && \
+    echo "deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ ${VERSION_CODENAME}-security main restricted universe multiverse" >> /etc/apt/sources.list; \
 fi
 
 RUN apt update && apt install -y tzdata && \

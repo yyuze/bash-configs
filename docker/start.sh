@@ -7,27 +7,39 @@ then
 fi
 
 help() {
-    echo "usage: $0 -d DIR"
+    echo "usage: $0 -d DIR [--cuda]"
     echo
     echo "options:"
     echo "  -d DIR      abs path of a direcotry, which will be shared with the docker"
+    echo "  --cuda      start yyuze_env_cuda:latest"
     echo
     echo "example:"
     echo "  $0 -d /path/to/shared"
+    echo "  $0 -d /path/to/shared --cuda"
 }
 
 shared_path=""
-while getopts ":d:" opt; do
-    case $opt in
-    d)
-        shared_path="$OPTARG"
+cuda=0
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    -d)
+        if [[ $# -lt 2 || "$2" == -* ]]; then
+            help
+            exit 1
+        fi
+        shared_path="$2"
+        shift 2
         ;;
-    \?)
-        echo "unknown option: -$OPTARG" >&2
+    --cuda)
+        cuda=1
+        shift
+        ;;
+    -h|--help)
         help
-        exit 1
+        exit 0
         ;;
-    :)
+    *)
+        echo "unknown option: $1" >&2
         help
         exit 1
         ;;
@@ -40,12 +52,12 @@ if [ -z "${shared_path}" ]; then
     exit 1
 fi
 
-if [ ! -d ${shared_path} ]; then
+if [ ! -d "${shared_path}" ]; then
     echo "${shared_path} directory is not exist"
     exit 1
 fi
 
-if [ $(realpath ${shared_path}) != ${shared_path} ]; then
+if [ "$(realpath "${shared_path}")" != "${shared_path}" ]; then
     echo "${shared_path} should be absolute"
     exit 1
 fi
@@ -87,6 +99,11 @@ else
     home="/home/${user}"
 fi
 
+image="yyuze_env:latest"
+if [ "${cuda}" -eq 1 ]; then
+    image="yyuze_env_cuda:latest"
+fi
+
 # start docker container
 container_id=$(
     docker run \
@@ -95,7 +112,7 @@ container_id=$(
     --cap-add SYS_ADMIN \
     -v ${shared_path}:${home}/$(basename ${shared_path}) \
     -p "0.0.0.0:${ssh_port}:22" \
-    yyuze_env:latest \
+    "${image}" \
     "sudo" "/usr/sbin/sshd" "-D"
 )
 
