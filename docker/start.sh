@@ -100,14 +100,17 @@ else
 fi
 
 image="yyuze_env:latest"
+gpu_args=()
 if [ "${cuda}" -eq 1 ]; then
     image="yyuze_env_cuda:latest"
+    gpu_args=(--gpus all)
 fi
 
 # start docker container
 container_id=$(
     docker run \
     -d \
+    "${gpu_args[@]}" \
     --device /dev/fuse \
     --cap-add SYS_ADMIN \
     -v ${shared_path}:${home}/$(basename ${shared_path}) \
