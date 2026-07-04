@@ -6,6 +6,7 @@ ARG HOST_USER
 ARG HOST_UID
 ARG HOST_GID
 ARG NODE_MAJOR=24
+ARG BASH_CONFIGS_REPO=https://github.com/yyuze/bash-configs.git
 
 WORKDIR /root
 
@@ -62,15 +63,24 @@ RUN mkdir /run/sshd && \
 # Add host user
 ARG USER_HOME
 
-RUN if ! getent group ${HOST_USER} >/dev/null 2>&1; then \
-        groupadd --gid ${HOST_GID} ${HOST_USER}; \
+RUN if ! getent group "${HOST_USER}" >/dev/null 2>&1; then \
+        groupadd --gid "${HOST_GID}" "${HOST_USER}"; \
     fi && \
-    if ! id ${HOST_USER} >/dev/null 2>&1; then \
-        useradd --uid ${HOST_UID} --gid ${HOST_GID} -m ${HOST_USER} -s "/bin/bash" -p $(openssl passwd -6 123456); \
+    if ! id "${HOST_USER}" >/dev/null 2>&1; then \
+        useradd --uid "${HOST_UID}" --gid "${HOST_GID}" -m "${HOST_USER}" -s "/bin/bash" -p "$(openssl passwd -6 123456)"; \
     fi && \
-    if ${HOST_USER} != "root"; then \
-        echo "${HOST_USER} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/${HOST_USER}; \
+    if [ "${HOST_USER}" != "root" ]; then \
+        echo "${HOST_USER} ALL=(ALL) NOPASSWD:ALL" >> "/etc/sudoers.d/${HOST_USER}"; \
     fi
+
+# Install user configs from bash-configs
+RUN export http_proxy="${PROXY}" && \
+    export https_proxy="${PROXY}" && \
+    git -c http.proxy="${PROXY}" clone --depth 1 "${BASH_CONFIGS_REPO}" /opt/bash-configs && \
+    user_home="$(getent passwd "${HOST_USER}" | cut -d: -f6)" && \
+    install -m 0644 /opt/bash-configs/tmux.conf "${user_home}/.tmux.conf" && \
+    install -m 0644 /opt/bash-configs/vimrc "${user_home}/.vimrc" && \
+    chown "${HOST_USER}:${HOST_USER}" "${user_home}/.tmux.conf" "${user_home}/.vimrc"
 
 WORKDIR ${USER_HOME}
 
