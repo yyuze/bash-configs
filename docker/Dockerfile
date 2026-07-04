@@ -49,9 +49,13 @@ RUN export http_proxy="${PROXY}" && \
 # Install Codex CLI
 RUN export http_proxy="${PROXY}" && \
     export https_proxy="${PROXY}" && \
-    mkdir -p /opt/codex /usr/local/bin && \
-    curl -fsSL https://chatgpt.com/codex/install.sh | \
-        CODEX_HOME=/opt/codex CODEX_NON_INTERACTIVE=1 CODEX_INSTALL_DIR=/usr/local/bin sh && \
+    export HTTP_PROXY="${PROXY}" && \
+    export HTTPS_PROXY="${PROXY}" && \
+    if [ -n "${PROXY}" ]; then \
+        npm --proxy="${PROXY}" --https-proxy="${PROXY}" install -g @openai/codex; \
+    else \
+        npm install -g @openai/codex; \
+    fi && \
     codex --version
 
 # Enable sshd
