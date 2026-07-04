@@ -5,6 +5,7 @@ ARG PROXY
 ARG HOST_USER
 ARG HOST_UID
 ARG HOST_GID
+ARG NODE_MAJOR=24
 
 WORKDIR /root
 
@@ -35,6 +36,22 @@ RUN apt install -y --fix-missing \
 RUN if [ x"$(arch 2>/dev/null)" = x"x86_64" ]; then \
     apt-get update && apt-get install -y g++-12-aarch64-linux-gnu gcc-12-aarch64-linux-gnu; \
 fi
+
+# Install Node.js
+RUN export http_proxy="${PROXY}" && \
+    export https_proxy="${PROXY}" && \
+    curl -fsSL https://deb.nodesource.com/setup_${NODE_MAJOR}.x | bash - && \
+    apt-get install -y nodejs && \
+    node --version && \
+    npm --version
+
+# Install Codex CLI
+RUN export http_proxy="${PROXY}" && \
+    export https_proxy="${PROXY}" && \
+    mkdir -p /opt/codex /usr/local/bin && \
+    curl -fsSL https://chatgpt.com/codex/install.sh | \
+        CODEX_HOME=/opt/codex CODEX_NON_INTERACTIVE=1 CODEX_INSTALL_DIR=/usr/local/bin sh && \
+    codex --version
 
 # Enable sshd
 RUN mkdir /run/sshd && \
