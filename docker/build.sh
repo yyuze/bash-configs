@@ -54,13 +54,29 @@ if [ "${cuda}" -eq 1 ]; then
     tag="yyuze_env_cuda"
 fi
 
+if [ -n "${SUDO_USER}" ] && [ "${SUDO_USER}" != "root" ]; then
+    host_user="${SUDO_USER}"
+    host_uid="${SUDO_UID:-$(id -u "${host_user}")}"
+    host_gid="${SUDO_GID:-$(id -g "${host_user}")}"
+else
+    host_user="$(id -un)"
+    host_uid="$(id -u)"
+    host_gid="$(id -g)"
+fi
+
+if [ "${host_user}" = "root" ]; then
+    user_home="/root"
+else
+    user_home="/home/${host_user}"
+fi
+
 docker build \
 --build-arg BASE_IMAGE="${base_image}" \
 --build-arg PROXY="${proxy}" \
---build-arg HOST_USER="${SUDO_USER}" \
---build-arg HOST_UID="${SUDO_UID}" \
---build-arg HOST_GID="${SUDO_GID}" \
---build-arg USER_HOME="${HOME}" \
+--build-arg HOST_USER="${host_user}" \
+--build-arg HOST_UID="${host_uid}" \
+--build-arg HOST_GID="${host_gid}" \
+--build-arg USER_HOME="${user_home}" \
 -f ${PWD}/Dockerfile \
 -t "${tag}" \
 .

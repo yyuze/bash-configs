@@ -2,7 +2,7 @@ ARG BASE_IMAGE=ubuntu:22.04
 FROM ${BASE_IMAGE}
 
 ARG PROXY
-ARG HOST_USER
+ARG HOST_USER=root
 ARG HOST_UID
 ARG HOST_GID
 ARG NODE_MAJOR=24
@@ -65,26 +65,34 @@ RUN mkdir /run/sshd && \
     ssh-keygen -t rsa -b 4096 -f /root/.ssh/id_rsa -N ""
 
 # Add host user
-ARG USER_HOME
+ARG USER_HOME=/root
 
-RUN if ! getent group "${HOST_USER}" >/dev/null 2>&1; then \
-        groupadd --gid "${HOST_GID}" "${HOST_USER}"; \
-    fi && \
-    if ! id "${HOST_USER}" >/dev/null 2>&1; then \
-        useradd --uid "${HOST_UID}" --gid "${HOST_GID}" -m "${HOST_USER}" -s "/bin/bash" -p "$(openssl passwd -6 123456)"; \
-    fi && \
-    if [ "${HOST_USER}" != "root" ]; then \
-        echo "${HOST_USER} ALL=(ALL) NOPASSWD:ALL" >> "/etc/sudoers.d/${HOST_USER}"; \
+RUN host_user="${HOST_USER:-root}" && \
+    if [ "${host_user}" != "root" ]; then \
+        if [ -z "${HOST_UID}" ] || [ -z "${HOST_GID}" ]; then \
+            echo "HOST_UID and HOST_GID are required when HOST_USER is not root" >&2; \
+            exit 1; \
+        fi && \
+        if ! getent group "${HOST_GID}" >/dev/null 2>&1; then \
+            groupadd --gid "${HOST_GID}" "${host_user}"; \
+        fi && \
+        if ! id "${host_user}" >/dev/null 2>&1; then \
+            useradd --uid "${HOST_UID}" --gid "${HOST_GID}" -m "${host_user}" -s "/bin/bash" -p "$(openssl passwd -6 123456)"; \
+        fi && \
+        echo "${host_user} ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/${host_user}" && \
+        chmod 0440 "/etc/sudoers.d/${host_user}"; \
     fi
 
 # Install user configs from bash-configs
 RUN export http_proxy="${PROXY}" && \
     export https_proxy="${PROXY}" && \
     git -c http.proxy="${PROXY}" clone --depth 1 "${BASH_CONFIGS_REPO}" /opt/bash-configs && \
-    user_home="$(getent passwd "${HOST_USER}" | cut -d: -f6)" && \
+    host_user="${HOST_USER:-root}" && \
+    user_home="$(getent passwd "${host_user}" | cut -d: -f6)" && \
+    user_group="$(id -gn "${host_user}")" && \
     install -m 0644 /opt/bash-configs/tmux.conf "${user_home}/.tmux.conf" && \
     install -m 0644 /opt/bash-configs/vimrc "${user_home}/.vimrc" && \
-    chown "${HOST_USER}:${HOST_USER}" "${user_home}/.tmux.conf" "${user_home}/.vimrc"
+    chown "${host_user}:${user_group}" "${user_home}/.tmux.conf" "${user_home}/.vimrc"
 
 WORKDIR ${USER_HOME}
 
